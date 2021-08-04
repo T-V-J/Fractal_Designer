@@ -943,15 +943,6 @@ void MainWindow::on_actionStop_triggered()
         QMessageBox::information(this, "Information", "You have not created images.");
         return;
     }
-    emit createImageStop();
-
-    create_image_info->close();
-
-    qDebug() << "Build Thread quit";
-    ui->actionCreate_Images->setDisabled(false);
-    ui->actionCreate_Images_in_Range->setDisabled(false);
-    ui->actionCheck_Images->setDisabled(false);
-    ui->actionStop->setDisabled(true);
 }
 
 void MainWindow::build_image_finished_deal()
@@ -2924,7 +2915,7 @@ bool MainWindow::eventFilter(QObject* object, QEvent *event)
             return true;
         }
         /**
-         * \todo This is only ok for Windows
+         * \todo "Ctrl+C" only be ok for Windows ("Crtl+Insert" or "Ctrl+Shift+C" not considered)
          */
         else if (keyEvent->keyCombination() != QKeyCombination(Qt::CTRL, Qt::Key_C))
         {
@@ -3318,6 +3309,23 @@ void MainWindow::createImages()
                             1, image_format, path, name + QString::number(total_image - 1), "Create_Image_Last",
                             currInfo.inverseYAsis());
     QThreadPool::globalInstance()->start(create_images);
+}
+
+void MainWindow::stopCreateImages()
+{
+    // stop the process
+    emit createImageStop();
+
+    create_image_info->close();
+    ui->textEdit_terminal->moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
+    normalTerminalMessage("Creating Images terminated.");
+    ui->textEdit_terminal->append("\n>> ");
+    ui->textEdit_terminal->setReadOnly(false);
+
+    ui->actionCreate_Images->setDisabled(false);
+    ui->actionCreate_Images_in_Range->setDisabled(false);
+    ui->actionCheck_Images->setDisabled(false);
+    ui->actionStop->setDisabled(true);
 }
 
 void MainWindow::createVideo()
@@ -3844,6 +3852,9 @@ void MainWindow::terminalCommand()
                                           "  exit                   Exit Fractal Designer.\n"
                                           "    -f                     Force exit no matter whether script is saved.\n"
                                           "    -s                     Save script before exir.\n"
+                                          "  ffmpeg                 Your customized commands with ffmpeg."
+                                          "  ffplay                 Your customized commands with ffplay."
+                                          "  ffprobe                Your customized commands with ffprobe."
                                           "  help                   View help information.\n"
                                           "  history                View command histories.\n"
                                           "  info                   View current parameter information.\n"
@@ -3857,6 +3868,7 @@ void MainWindow::terminalCommand()
                                           "                         If you don't have, use \"sudo apt install ffmpeg\"."
 #endif
                                           "  preview                View the preview image.\n"
+                                          "  quit                   Same as exit.\n"
                                           "  run                    Run the frd script and display information in the form of Json.\n"
                                           "                         Need to run the script first to get information updated.\n"
                                           "  save                   Save the frd script.\n");
@@ -3927,7 +3939,7 @@ void MainWindow::terminalCommand()
             }
             ui->textEdit_terminal->append("\n>> ");
         }
-        else if (cmds[0] == "exit")
+        else if (cmds[0] == "exit" || cmds[0] == "quit")
         {
             if (cmds.size() >= 2)
             {
@@ -3958,4 +3970,12 @@ void MainWindow::clearTerminal()
     ui->textEdit_terminal->clear();
     ui->textEdit_terminal->append(">> ");
     ui->textEdit_terminal->moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
+}
+
+void MainWindow::on_actionStop_Code_triggered()
+{
+    if (currentTerminalWorkName == "Create Images")
+    {
+        stopCreateImages();
+    }
 }

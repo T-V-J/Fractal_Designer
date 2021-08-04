@@ -353,6 +353,8 @@ private slots:
 
     void createImages();
 
+    void stopCreateImages();
+
     void createVideo();
 
     void playVideo();
@@ -384,6 +386,8 @@ private slots:
     void terminalCommand();
 
     void clearTerminal();
+
+    void on_actionStop_Code_triggered();
 
 signals:
 
