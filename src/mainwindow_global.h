@@ -54,6 +54,7 @@
 #include <QDialog>
 #include <QTextDocument>
 #include <QTextBlock>
+#include <QFontMetrics>
 #include <complex> // std::complex
 #include "login.h"
 #include "route_tool.h"

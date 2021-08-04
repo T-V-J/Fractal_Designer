@@ -134,6 +134,11 @@ MainWindow::MainWindow(QWidget *parent)
                                    ">> ");                                        // start of the terminal
     ui->textEdit_terminal->moveCursor(QTextCursor::End, QTextCursor::MoveAnchor); // move the cursor
 
+    // set cursor width
+    QFontMetrics terminalFontMetrics(ui->textEdit_terminal->font());
+    int terminalCharWidth = terminalFontMetrics.averageCharWidth();
+    ui->textEdit_terminal->setCursorWidth(terminalCharWidth);
+
     create_image_info = new Create_Image_Info;
     connect(this, &MainWindow::build_image_info_signal, create_image_info, &Create_Image_Info::set_info);
     connect(this, &MainWindow::build_image_updateInfo_signal, create_image_info, &Create_Image_Info::updateInfo);
@@ -2925,7 +2930,7 @@ bool MainWindow::eventFilter(QObject* object, QEvent *event)
             auto posEnd = cursor.selectionEnd();
             cursor.setPosition(posStart);
             // If it is the backspace, then the cursor position must be one further.
-            int col_limit = keyEvent->key() == Qt::Key_Backspace ? 4 : 3;
+            int col_limit = (keyEvent->key() == Qt::Key_Backspace || keyEvent->key() == Qt::Key_Left) ? 4 : 3;
             if (cursor.blockNumber() < ui->textEdit_terminal->document()->lineCount() - 1 || cursor.columnNumber() < col_limit)
             {
                 // not the last row or be the first three column
