@@ -351,6 +351,8 @@ private slots:
 
     void preview();
 
+    void stopPreview();
+
     void createImages();
 
     void stopCreateImages();
@@ -454,6 +456,8 @@ private:
 
     Preview_Setting* preview_setting = new Preview_Setting(this);
 
+    Create_Image_Task* previewTask;
+
     QDialog* preview_dialog = new QDialog(this);
     QHBoxLayout* preview_dialog_layout = new QHBoxLayout(preview_dialog);
     QLabel* preview_dialog_label = new QLabel;
@@ -524,6 +528,8 @@ private:
     int currentTerminalProgress = 0;
 
     QString currentTerminalWorkName;
+
+    QDir terminalCurrentDir;
 
     QToolBar * generateBorder(Qt::ToolBarArea area, Qt::Orientation orientation);
 };

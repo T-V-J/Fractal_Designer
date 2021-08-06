@@ -139,6 +139,10 @@ MainWindow::MainWindow(QWidget *parent)
     int terminalCharWidth = terminalFontMetrics.averageCharWidth();
     ui->textEdit_terminal->setCursorWidth(terminalCharWidth);
 
+    QString terminalCurrentDirName = QCoreApplication::applicationDirPath() + "/../usr/frd";
+
+    terminalCurrentDir = terminalCurrentDirName;
+
     create_image_info = new Create_Image_Info;
     connect(this, &MainWindow::build_image_info_signal, create_image_info, &Create_Image_Info::set_info);
     connect(this, &MainWindow::build_image_updateInfo_signal, create_image_info, &Create_Image_Info::updateInfo);
@@ -158,6 +162,25 @@ MainWindow::~MainWindow()
 
     if (this->m_menuBar) delete this->m_menuBar;
     else if (this->m_menuWidget) delete this->m_menuWidget;
+
+    delete Line_Search;
+    delete Button_Search;
+    delete search_result;
+    delete Label_User_Name;
+    delete Button_Login_MainWindow;
+    delete create_image_info;
+    delete translator;
+    delete table_route_menu;
+    delete table_route_action[5];
+    delete template_2_dialog;
+    delete template_4_dialog;
+    delete preview_setting;
+    delete previewTask;
+    delete preview_dialog;
+    delete preview_dialog_layout;
+    delete preview_dialog_label;
+    delete route_tool_window;
+    delete editor;
     delete ui;
 }
 
@@ -165,12 +188,12 @@ void MainWindow::initTitleBar()
 {
     this->setWindowFlags(Qt::FramelessWindowHint | Qt::WindowMinimizeButtonHint);
     this->m_titleBar = new class::FRD_TitleBar(this);
-    connect(this->m_titleBar, &FRD_TitleBar::requestClose,this, &MainWindow::close);
+    connect(this->m_titleBar, &FRD_TitleBar::requestClose, this, &MainWindow::close);
     connect(this->m_titleBar, &FRD_TitleBar::requestMaximize, [this]{if (this->isMaximized()) this->showNormal();else this->showMaximized();});
-    connect(this->m_titleBar, &FRD_TitleBar::requestMinimize,this, &MainWindow::showMinimized);
+    connect(this->m_titleBar, &FRD_TitleBar::requestMinimize, this, &MainWindow::showMinimized);
     connect(this, &QMainWindow::windowTitleChanged, this->m_titleBar,&QWidget::setWindowTitle);
-    connect(&this->FRD_titleBar().btn_maximize,SIGNAL(clicked()),this,SLOT(updateMaxButton()));
-    connect(&this->FRD_titleBar(),SIGNAL(doubleClicked()),this,SLOT(updateMaxButton()));
+    connect(&this->FRD_titleBar().btn_maximize,SIGNAL(clicked()), this, SLOT(updateMaxButton()));
+    connect(&this->FRD_titleBar(),SIGNAL(doubleClicked()), this, SLOT(updateMaxButton()));
 
     this->m_titleBarW = new QWidget();
     this->m_titleBarW->setMouseTracking(true);
@@ -256,6 +279,7 @@ void MainWindow::on_Button_Login_MainWindow_clicked()
     connect(l, &Login::user_name, this, &MainWindow::getUserName);
     l->show();
     l->exec();
+    delete l;
 }
 
 void MainWindow::on_Button_Search_clicked()
@@ -1089,10 +1113,10 @@ void MainWindow::on_actionFFmpeg_triggered()
 {
 #if defined (WIN32) || defined (_WIN64)
     QProcess FFmpeg_Process(this);
-    QString programme = "Resources/ffmpeg.exe";
+    QString programme = "win/ffmpeg.exe";
     // run the programme FFmpeg
     FFmpeg_Process.start(programme);
-    if(FFmpeg_Process.waitForFinished(5000))
+    if (FFmpeg_Process.waitForFinished(5000))
     {
         QMessageBox::information(this, "Information", "FFmpeg already installed!");
     }
@@ -3132,13 +3156,9 @@ void MainWindow::preview()
     currentTerminalWorkName = "Preview";
     initTerminalProgressBar();
 
-    Create_Image_Task* preview = new Create_Image_Task(this);
+    previewTask = new Create_Image_Task(this);
 
-    if (!createImagePre(preview))
-    {
-        delete preview;
-        return;
-    }
+    if (!createImagePre(previewTask)) return;
 
     QString Pre_Img_Dir;
 
@@ -3182,15 +3202,23 @@ void MainWindow::preview()
     }
     */
 
-    preview->setImage(info.curr().PreviewCentre("X"), info.curr().PreviewCentre("Y"),
-                      info.curr().PreviewSize("X"), info.curr().PreviewSize("Y"),
-                      info.curr().PreviewImageSize("X"), info.curr().PreviewImageSize("Y"),
-                      info.curr().PreviewRotation(), info.curr().PreviewTime(),
-                      "png", Pre_Img_Dir, "Preview Image", "Preview",
-                      info.curr().inverseYAsis());
+    previewTask->setImage(info.curr().PreviewCentre("X"), info.curr().PreviewCentre("Y"),
+                          info.curr().PreviewSize("X"), info.curr().PreviewSize("Y"),
+                          info.curr().PreviewImageSize("X"), info.curr().PreviewImageSize("Y"),
+                          info.curr().PreviewRotation(), info.curr().PreviewTime(),
+                          "png", Pre_Img_Dir, "Preview Image", "Preview",
+                          info.curr().inverseYAsis());
 
-    QThreadPool::globalInstance()->start(preview);
+    QThreadPool::globalInstance()->start(previewTask);
     qDebug() << "Refreshed";
+}
+
+void MainWindow::stopPreview()
+{
+    previewTask->stop();
+    ui->textEdit_terminal->moveCursor(QTextCursor::End);
+    ui->textEdit_terminal->append("\n>> ");
+    ui->textEdit_terminal->setReadOnly(false);
 }
 
 void MainWindow::createImages()
@@ -3845,7 +3873,8 @@ void MainWindow::terminalCommand()
         if (cmds[0] == "help")
         {
             ui->textEdit_terminal->append("Fractal Designer 6.0.9 Terminal\n"
-                                          "Lists of all commands:\n"
+                                          "List of all commands:\n"
+                                          "  cd                     Change the current working directory.\n"
                                           "  clear                  Clear the terminal screen.\n"
                                           "  createimages           Create fractal images.\n"
                                           "  createvideo            Create fractal video.\n"
@@ -3853,13 +3882,14 @@ void MainWindow::terminalCommand()
                                           "                         You need to have ffmpeg."
                                           "                         If you don't have, use \"sudo apt install ffmpeg\"."
 #endif
-                                          "  closepreview           Close the preview window.\n"
+                                          "  closepreview           Close the preview window. You can also press 'Esc'.\n"
+                                          "  currentdir             The current working directory.\n"
                                           "  exit                   Exit Fractal Designer.\n"
                                           "    -f                     Force exit no matter whether script is saved.\n"
                                           "    -s                     Save script before exir.\n"
-                                          "  ffmpeg                 Your customized commands with ffmpeg."
-                                          "  ffplay                 Your customized commands with ffplay."
-                                          "  ffprobe                Your customized commands with ffprobe."
+                                          "  ffmpeg                 Your customized commands with ffmpeg.\n"
+                                          "  ffplay                 Your customized commands with ffplay.\n"
+                                          "  ffprobe                Your customized commands with ffprobe.\n"
                                           "  help                   View help information.\n"
                                           "  history                View command histories.\n"
                                           "  info                   View current parameter information.\n"
@@ -3944,6 +3974,23 @@ void MainWindow::terminalCommand()
             }
             ui->textEdit_terminal->append("\n>> ");
         }
+        else if (cmds[0] == "cd")
+        {
+            if (cmds.size() == 1)
+            {
+                errorTerminalMessage("You need to specify the directory you want to change to.");
+            }
+            else
+            {
+                // TODO
+            }
+            ui->textEdit_terminal->append("\n>> ");
+        }
+        else if (cmds[0] == "currentdir")
+        {
+            normalTerminalMessage(tr("Current Working Directory: ") + terminalCurrentDir.absolutePath());
+            ui->textEdit_terminal->append("\n>> ");
+        }
         else if (cmds[0] == "exit" || cmds[0] == "quit")
         {
             if (cmds.size() >= 2)
@@ -3982,5 +4029,9 @@ void MainWindow::on_actionStop_Code_triggered()
     if (currentTerminalWorkName == "Create Images")
     {
         stopCreateImages();
+    }
+    else if (currentTerminalWorkName == "Preview")
+    {
+        stopPreview();
     }
 }
