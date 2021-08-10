@@ -3837,6 +3837,26 @@ void MainWindow::outsideCommand(const QString& cmd)
     terminalCommands.push_back(cmd);
 }
 
+QStringList splitArgument(QString cmd)
+{
+    bool inQuote = false;
+    for (auto iter = cmd.begin(); iter != cmd.end(); iter++)
+    {
+        if (!inQuote && *iter == ' ')
+        {
+            *iter = QChar(0);   // argument seperators are set as QChar(0)
+        }
+        if (*iter == '\"')
+        {
+            inQuote = !inQuote; // change the state of being inside or outside a quote
+            *iter = QChar(1);   // omit the quote symbol
+        }
+    }
+    cmd.remove(QChar(1));
+    QStringList cmds = cmd.split(QChar(0), Qt::SkipEmptyParts);
+    return cmds;
+}
+
 void MainWindow::terminalCommand()
 {
     // The second line.
@@ -3845,13 +3865,14 @@ void MainWindow::terminalCommand()
     qDebug() << "Get terminal command" << cmdline;
     if (cmdline.length() > 2 && cmdline.left(2) == ">>")
     {
-        QString cmd = cmdline.right(cmdline.length() - 2).simplified().toLower();
-        QStringList cmds = cmd.split(" ", Qt::SkipEmptyParts);
+        QString cmd = cmdline.right(cmdline.length() - 2).simplified();
+        QStringList cmds = splitArgument(cmd);
         if (cmd.isEmpty())
         {
             ui->textEdit_terminal->append(">> ");
             return;
         }
+        cmds[0] = cmds[0].toLower();
         if (cmds[0] == "!!") // repeat the last command
         {
             if (terminalCommands.isEmpty())
@@ -3865,7 +3886,7 @@ void MainWindow::terminalCommand()
             {
                 ui->textEdit_terminal->append(terminalCommands.last());
                 cmd = terminalCommands.last();
-                cmds = cmd.split(" ", Qt::SkipEmptyParts);
+                cmds = splitArgument(cmd);
             }
         }
         // no else here
@@ -3875,6 +3896,9 @@ void MainWindow::terminalCommand()
             ui->textEdit_terminal->append("Fractal Designer 6.0.9 Terminal\n"
                                           "List of all commands:\n"
                                           "  cd                     Change the current working directory.\n"
+#if defined (WIN32) || defined (WIN64)
+                                          "                         You can also use command \"cd /d\".\n"
+#endif
                                           "  clear                  Clear the terminal screen.\n"
                                           "  createimages           Create fractal images.\n"
                                           "  createvideo            Create fractal video.\n"
@@ -3897,6 +3921,8 @@ void MainWindow::terminalCommand()
                                           "                           These parameters are set using function \"%CONFIGURE\".\n"
                                           "    -var                   View all variables information.\n"
                                           "    -all                   View both configuration and variable information.\n"
+                                          "  open                   Open frd project. Omitting the suffix is ok.\n"
+                                          "                         If no parameter is set, the dialog \"Open Project\" will be shown.\n"
                                           "  playvideo              Play generated video using ffplay.\n"
 #ifdef __linux__
                                           "                         You need to have ffmpeg."
@@ -3923,6 +3949,18 @@ void MainWindow::terminalCommand()
         else if (cmds[0] == "run")
         {
             runCode();
+        }
+        else if (cmds[0] == "open")
+        {
+            if (cmds.size() == 1)
+            {
+                on_actionOpen_O_triggered();
+            }
+            else
+            {
+                // TODO
+            }
+            ui->textEdit_terminal->append("\n>> ");
         }
         else if (cmds[0] == "info")
         {
@@ -3982,7 +4020,28 @@ void MainWindow::terminalCommand()
             }
             else
             {
-                // TODO
+                QString dir = cmds[1];
+#if defined (WIN32) || defined (WIN64)
+                if (dir == "/d")
+                {
+                    if (cmds.size() == 2)
+                    {
+                        errorTerminalMessage("You need to specify the directory you want to change to.");
+                    }
+                    else
+                    {
+                        dir = cmds[2];
+                    }
+                }
+#endif
+                if (terminalCurrentDir.cd(dir))
+                {
+                    normalTerminalMessage("Working directory changed to: " + terminalCurrentDir.absolutePath());
+                }
+                else
+                {
+                    errorTerminalMessage("The path does not exist.");
+                }
             }
             ui->textEdit_terminal->append("\n>> ");
         }
