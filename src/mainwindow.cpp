@@ -4022,26 +4022,28 @@ void MainWindow::terminalCommand()
             {
                 QString dir = cmds[1];
 #if defined (WIN32) || defined (WIN64)
-                if (dir == "/d")
+                if (dir == "/d" && cmds.size() == 2)
                 {
-                    if (cmds.size() == 2)
-                    {
-                        errorTerminalMessage("You need to specify the directory you want to change to.");
-                    }
-                    else
-                    {
-                        dir = cmds[2];
-                    }
-                }
-#endif
-                if (terminalCurrentDir.cd(dir))
-                {
-                    normalTerminalMessage("Working directory changed to: " + terminalCurrentDir.absolutePath());
+                    errorTerminalMessage("You need to specify the directory you want to change to.");
                 }
                 else
                 {
-                    errorTerminalMessage("The path does not exist.");
+                    if (dir.toLower() == "/d")
+                    {
+                        dir = cmds[2];
+                    }
+#endif
+                    if (terminalCurrentDir.cd(dir))
+                    {
+                        normalTerminalMessage("Working directory changed to: " + terminalCurrentDir.absolutePath());
+                    }
+                    else
+                    {
+                        errorTerminalMessage("The path does not exist.");
+                    }
+#if defined (WIN32) || defined (WIN64)
                 }
+#endif
             }
             ui->textEdit_terminal->append("\n>> ");
         }
